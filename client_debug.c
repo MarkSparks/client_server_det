@@ -25,17 +25,22 @@ int main(){
   /* Set all bits of the padding field to 0 */
   memset(serverAddr.sin_zero, '\0', sizeof serverAddr.sin_zero);  
 
-  /**Connect the socket to the server using the address struct**/
+  /*---- Connect the socket to the server using the address struct ----*/
   addr_size = sizeof serverAddr;
   connect(clientSocket, (struct sockaddr *) &serverAddr, addr_size);
-
   while(1){
-    //Read the message from the server into the buffer, 
-    //Get the request from server
+
+    /*---- Read the message from the server into the buffer ----*/
     recv(clientSocket, iBuffer, 1024, 0);
-    int option = atoi(iBuffer);//chanage read string to int 
+
+    /*---- Print the received message ----*/
+    //printf("Request option: %s;\n",iBuffer);   
+
+    int option = atoi(iBuffer);
+
 
     if(option == 0 ){
+
       //getMatrix
       printf("Enter the value 'n' for the 'nxn' matrix: ");
       scanf("%d",&n);
@@ -47,17 +52,25 @@ int main(){
       strcpy(oBuffer,out);
       send(clientSocket,oBuffer,13,0);
 
-    }else if(option == 1){ 
+
+     }else if(option == 1){ 
       
-      //get suitable string size
+      //getString size
       int size = (4 * (n * n)) + (n * 2);
+      printf("String size: %d\n",size);
       
       char str[size];
       int c,r;
       char i;
       char rd[3];
+      //scanf("%c",&i);
       fflush(stdin);
+      //strcat(str,"0");
       int count;
+      /*for (count = 0; count < size; ++count)
+      {
+        str[count] = '';
+      }*/
       memset(str,'\0',size);
 
       int pos = 0;
@@ -87,8 +100,5 @@ int main(){
 
     }
   }
-
-
-
   return 0;
 }

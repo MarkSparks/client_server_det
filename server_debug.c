@@ -142,10 +142,8 @@ int det(int **m,int n){
                   printf("mr -> %d\n",m_r);
 
                   if((c%2) == 0 || c == 0){
-                    //c_pos = c + 1;
                     pos = 1;
                   }else{
-                    //c_pos = c - 1;
                     pos = -1;
                   }
                   if(m_c != c){
@@ -168,7 +166,7 @@ int det(int **m,int n){
           printf("eqn -> %d * (%d * %d )\n",pos,f,temp);
           d = d + pos * (f * temp);
       }
-         return(d);
+      return(d);
     }
    
 }
