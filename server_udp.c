@@ -14,8 +14,13 @@ int main(){
   struct sockaddr_storage serverStorage;
   socklen_t addr_size;
 
-  /*Create socket (internet domain, stream socket, protocol(TCP))*/
-  mSocket = socket(PF_INET, SOCK_STREAM, 0);
+  /*Create socket (internet domain,connectionless datagram, protocol in given socket type(UDP))*/
+  mSocket = socket(PF_INET, SOCK_DGRAM, 0);
+
+  /* Eliminates "ERROR on binding: Address already in use" error. */
+  int optval = 1;
+  setsockopt(mSocket, SOL_SOCKET, SO_REUSEADDR, 
+       (const void *)&optval , sizeof(int));
   
   /*Server address struct*/
 
@@ -29,74 +34,85 @@ int main(){
   memset(serverAddr.sin_zero, '\0', sizeof serverAddr.sin_zero);
 
   /* Bind the address struct to the socket*/
-  bind(mSocket, (struct sockaddr *) &serverAddr, sizeof(serverAddr));
-
-  /*Listen on mSocket, backlog -> with 5 max connection requests queued*/
-  if(listen(mSocket,5)==0){
-    printf("Listening\n");
-  }else{
-    printf("Error\n");
+  if (bind(mSocket, (struct sockaddr *) &serverAddr, sizeof(serverAddr)) < 0 ) {
+      perror( "bind failed" );
+      return 1;
   }
 
-  /* Accept call creates a new socket for the incoming connection */
-  addr_size = sizeof serverStorage;
-  newSocket = accept(mSocket, (struct sockaddr *) &serverStorage, &addr_size);
+  addr_size = sizeof serverAddr;
 
-  /* Request for order n of matrix */
-  strcpy(oBuffer,"0");
-  send(newSocket,oBuffer,13,0);
+  /* Receive matrix data*/
+  int len;
+  len = recvfrom( mSocket, iBuffer, sizeof(iBuffer) , 0, (struct sockaddr *) &serverAddr, &addr_size);
+  if ( len < 0 ) {
+      perror( "recvfrom failed" );
+      return 0;
+  }
 
-  recv(newSocket, iBuffer, 1024, 0);
-  printf("order n of matrix: %s\n",iBuffer);   
+  /*save string*/
+  char *str;
+  str = malloc(sizeof iBuffer * sizeof *str);
+  strcpy(str,iBuffer);
 
-  n = atoi(iBuffer);
+  printf("%s\n",str);   
+
+  /* split input to get matrix size */
+  char *ptr;
+  char *end_str1;
+  int size = 0; 
+  ptr = strtok_r(str,";",&end_str1);
+  //split by ; to get rows
+  while (ptr != NULL) {  
+      ptr = strtok_r(NULL, ";",&end_str1);
+      size++;
+  }
+  printf("order n of matrix: %d\n",size);   
+
+  n = size;
   a = n - 1;
   int **mat;
   int i;
+
   /* allocate the array space dynamically */
   mat = malloc(n * sizeof *mat);
   for (i=0; i<n; i++){
     mat[i] = malloc(n * sizeof *mat[i]);
   }
 
-   /* Request for string with matrix values */
-  strcpy(oBuffer,"1");
-  send(newSocket,oBuffer,13,0);
-
-  recv(newSocket, iBuffer, 2048, 0);
-  printf("matrix string: %s\n",iBuffer);  
-
-  /* split string to get matrix value */
+  /* split string to get matrix values */
   char *pt;
   char *end_str;
   int countR = 0;
   pt = strtok_r(iBuffer,";",&end_str);
   //split by ; to get rows
-  while (pt != NULL) {
+  while (pt != NULL){
       char *end_token;
       char *pt1;
       int countC = 0;
-      pt1 = strtok (pt,",");
+      pt1 = strtok(pt,",");
       //split string by , to get values
       while (pt1 != NULL) {
           mat[countR][countC] = atoi(pt1);
-          pt1 = strtok (NULL, ",");
+          pt1 = strtok(NULL,",");
           countC++;
       }
-      
-      pt = strtok_r(NULL, ";",&end_str);
-      printf("pt(end) -> %s\n", pt);
+      pt = strtok_r(NULL,";",&end_str);
       countR++;
   }
-  //call determinant function
-  printf("The det is %d\n",det(mat,n));
 
-  //Tell client to exit
-  strcpy(oBuffer,"2");
-  send(newSocket,oBuffer,13,0);
+  //call determinant function
+  int ans = det(mat,n);
+  printf("The det is %d\n",ans);
+  sprintf(oBuffer,"The det is %d\n",ans);
+
+  len = sendto(mSocket, oBuffer, strlen(oBuffer), 0, (struct sockaddr *) &serverAddr, addr_size);
+  if (len < 0){
+    error("ERROR in Request sendto");
+  }
 
   return 0;
 }
+
 int det(int **m,int n){
   if(n==1){
     //handle when mat size is 1

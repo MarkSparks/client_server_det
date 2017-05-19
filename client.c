@@ -16,7 +16,7 @@ int main(){
   clientSocket = socket(PF_INET, SOCK_STREAM, 0);
   //check error
   if (clientSocket < 0){
-      perror ("socket");
+      perror ("socket error");
       exit (0);
   }
   
